@@ -1,6 +1,6 @@
 <?php
 
-include_once('zend_db_class.inc');
+include_once('Drupal_Zend_Db_Class.php');
 include_once('zend_db_common.inc');
 include_once('zend_db_admin.inc');
 include_once('zend_db_theme.inc');
