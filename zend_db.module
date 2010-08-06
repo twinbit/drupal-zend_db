@@ -5,19 +5,23 @@ include_once('zend_db_common.inc');
 include_once('zend_db_admin.inc');
 include_once('zend_db_theme.inc');
 
+function zend_db_perm() {
+  return array('administer zend_db');
+}
+
 function zend_db_menu() {
   $items['admin/build/zend/db'] = array(
             'title' => 'Zend DB Configuration',
             'page callback' => 'zend_db_admin_overview',
             'access callback' => 'user_access',
-            'access arguments' => array('administer nodes'),
+            'access arguments' => array('administer zend_db'),
             'type' => MENU_NORMAL_ITEM
   );
 
   $items['admin/build/zend/db/list'] = array(
             'title' => 'Zend DB Overview',
             'access callback' => 'user_access',
-            'access arguments' => array('administer nodes'),
+            'access arguments' => array('administer zend_db'),
             'type' => MENU_DEFAULT_LOCAL_TASK,
             'weight' => 0
   );
@@ -27,7 +31,7 @@ function zend_db_menu() {
             'page callback' => 'zend_db_create_start',
             'page arguments' => array(5),
             'access callback' => 'user_access',
-            'access arguments' => array('administer nodes'),
+            'access arguments' => array('administer zend_db'),
             'type' => MENU_LOCAL_TASK,
             'weight' => 1
   );
@@ -39,7 +43,7 @@ function zend_db_menu() {
             'page callback' => 'zend_db_create_start',
             'page arguments' => array(5),
             'access callback' => 'user_access',
-            'access arguments' => array('administer nodes'),
+            'access arguments' => array('administer zend_db'),
             'type' => MENU_CALLBACK,
   );
 
@@ -50,7 +54,7 @@ function zend_db_menu() {
             'page callback' => 'zend_db_list_tables',
             'page arguments' => array(5),
             'access callback' => 'user_access',
-            'access arguments' => array('administer nodes'),
+            'access arguments' => array('administer zend_db'),
             'type' => MENU_CALLBACK,
   );
 
@@ -60,7 +64,7 @@ function zend_db_menu() {
             'page callback' => 'zend_db_describe_table',
             'page arguments' => array(6, 7),
             'access callback' => 'user_access',
-            'access arguments' => array('administer nodes'),
+            'access arguments' => array('administer zend_db'),
             'type' => MENU_CALLBACK,
   );
 
