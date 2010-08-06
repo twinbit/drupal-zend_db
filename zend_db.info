@@ -1,0 +1,5 @@
+name = "Zend DB"
+description = "Zend_db zend framework"
+version = "6.x-0.1"
+core = 6.x
+dependencies[] = zend

@@ -1,0 +1,315 @@
+<?php
+
+include_once('drupal_zend_db.class');
+include_once('zend_db_common.inc');
+include_once('zend_db_admin.inc');
+include_once('zend_db_theme.inc');
+
+function zend_db_menu() {
+  $items['admin/build/zend/db'] = array(
+            'title' => 'Zend DB Configuration',
+            'page callback' => 'zend_db_admin_overview',
+            'access callback' => 'user_access',
+            'access arguments' => array('administer nodes'),
+            'type' => MENU_NORMAL_ITEM
+  );
+
+  $items['admin/build/zend/db/list'] = array(
+            'title' => 'Zend DB Overview',
+            'access callback' => 'user_access',
+            'access arguments' => array('administer nodes'),
+            'type' => MENU_DEFAULT_LOCAL_TASK,
+            'weight' => 0
+  );
+
+  $items['admin/build/zend/db/create'] = array(
+            'title' => 'Create new RDBMS Connection',
+            'page callback' => 'zend_db_create_start',
+            'page arguments' => array(5),
+            'access callback' => 'user_access',
+            'access arguments' => array('administer nodes'),
+            'type' => MENU_LOCAL_TASK,
+            'weight' => 1
+  );
+
+  $items['admin/build/zend/db/edit/%zend_db_name'] = array(
+            'title' => 'Create new RDBMS Connection',
+            'title callback' => 'zend_db_title',
+            'title arguments' => array(5),
+            'page callback' => 'zend_db_create_start',
+            'page arguments' => array(5),
+            'access callback' => 'user_access',
+            'access arguments' => array('administer nodes'),
+            'type' => MENU_CALLBACK,
+  );
+
+
+  $items['admin/build/zend/db/tables/%zend_db_name'] = array(
+            'title callback' => 'zend_db_list_table_title',
+            'title arguments' => array(5),
+            'page callback' => 'zend_db_list_tables',
+            'page arguments' => array(5),
+            'access callback' => 'user_access',
+            'access arguments' => array('administer nodes'),
+            'type' => MENU_CALLBACK,
+  );
+
+  $items['admin/build/zend/db/tables/describe/%zend_db_name'] = array(
+            'title callback' => 'zend_db_describe_table_title',
+            'title arguments' => array(6, 7),
+            'page callback' => 'zend_db_describe_table',
+            'page arguments' => array(6, 7),
+            'access callback' => 'user_access',
+            'access arguments' => array('administer nodes'),
+            'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+function zend_db_title($preset) {
+  return t('Edit RDBMS Connection').': '.$preset->name;
+}
+
+function zend_db_list_table_title($preset) {
+  return t('List tables preset').': '.$preset->name;
+}
+
+function zend_db_describe_table_title($preset, $table) {
+  return t('Describe table').': '.$table.' -  Preset: '.$preset->name;
+}
+
+
+
+
+function zend_db_describe_table($preset, $table) {
+  $conn = zend_db_get_instance($preset->name);
+  if ($conn) {
+    $fields = $conn->describeTable($table);
+    return theme('zend_db_describe_table', $preset, $table, $fields);
+  }
+  else {
+    return t('No connection available for this Database, please check the configuration or if the RDBMS is accepting connection');
+  }
+}
+
+
+function zend_db_list_tables($preset) {
+  $conn = zend_db_get_instance($preset->name);
+  if ($conn) {
+    $tables = $conn->getTables();
+    if ($tables) {
+      return theme('zend_db_list_tables', $preset, $tables);
+    }
+  }
+  else {
+    return t('No connection available for this Database, please check the <a href="%url"> configuration </a> or if the RDBMS is accepting connection', array('%url' => 'admin/build/zend/db/edit/'.$preset->name));
+  }
+}
+
+function zend_db_name_load($name = '') {
+  if ($name) {
+    return _zend_db_get_connection_by_name($name);
+  } else {
+    return new stdClass();
+  }
+}
+
+function _zend_db_get_stored_connections() {
+  $sql = "SELECT COUNT(*) FROM {zend_db}";
+  if (!db_result(db_query($sql))) return t('No connections available.');
+
+  $header = array(
+    array(
+      'data'  => t('Name'),
+      'field' => 'name',
+      'sort'  => 'desc',
+    ),
+    array(
+      'data'  => t('DBMS Type'),
+      'field' => 'dbtype',
+      'sort'  => 'desc',
+    ),
+    array(
+      'data'  => t('Host'),
+      'field' => 'host',
+      'sort'  => 'desc',
+    ),
+    array(
+      'data'  => t('DB Name'),
+      'field' => 'dbname',
+      'sort'  => 'desc',
+    ),
+    t('Actions')
+  );
+  $sql = "SELECT name, dbtype, host, dbname FROM {zend_db}";
+  $sql .= tablesort_sql($header);
+  $result = pager_query($sql);
+
+  while ($res = db_fetch_array($result)) {
+     $rows[] = array(
+      l($res['name'], 'admin/build/zend/db/edit/'.$res['name'], array('query' => drupal_get_destination())),
+      $res['dbtype'],
+      $res['host'],
+      $res['dbname'],
+      _zend_db_actions($res),
+    );
+  }
+  $output .= theme('table', $header, $rows);
+  $output .= theme('pager', NULL, 25, 0);
+  return $output;
+}
+
+
+function _zend_db_actions($preset) {
+  $items[] = l(t('List tables'), 'admin/build/zend/db/tables/'.$preset['name']);
+  return theme('item_list', $items);
+}
+
+function zend_db_admin_overview() {
+  if (!$output .= _zend_db_get_stored_connections()) {
+    $output .= t('No connections found.');
+  }
+  return $output;
+}
+
+function zend_db_create_start($name = null) {
+  return drupal_get_form('zend_db_create_connection', $name);
+}
+
+function zend_db_create_connection($form_state, $preset = '') {
+  if (!$preset) {
+     $form['name'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Connection name'),
+      '#description' => t('The namespace is used in URL\'s for DB connection to tell zend_db how to connect to a database. Please only use alphanumeric characters, underscores (_), and hyphens (-) for preset names.'),
+      '#default_value' => ($preset ? $preset->name : ''),
+      '#required' => true,
+     );
+  }
+  $form['dbtype'] = array(
+    '#type' => 'select',
+    '#options' => array('mysql' => 'Mysql', 'pgsql' => 'Postgresql'),
+    '#title' => t('DBMB Type'),
+    '#description' => t('Select a DBMS supported'),
+    '#default_value' => ($preset ? $preset->dbtype : ''),
+    '#required' => true
+  );
+  $form['host'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Host'),
+    '#description' => t('DBMS Host'),
+    '#required' => true,
+    '#default_value' => ($preset ? $preset->host : '')
+  );
+  $form['username'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Username'),
+    '#description' => t('DBMS Username'),
+    '#required' => true,
+    '#default_value' => ($preset ? $preset->username : '')
+  );
+  $form['password'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Password'),
+    '#description' => t('DBMS PAssword'),
+   // '#required' => true,
+    '#default_value' => ($preset ? $preset->password : '')
+  );
+
+  $form['port'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Port'),
+    '#description' => t('Leave blank to use default DBMS standard port'),
+    '#required' => false,
+    '#default_value' => ($preset && $preset->port ? $preset->port : '')
+  );
+
+  $form['dbname'] = array(
+    '#type' => 'textfield',
+    '#title' => t('DB Name'),
+    '#description' => t('DBMS DB Name'),
+    '#required' => true,
+    '#default_value' => ($preset ? $preset->dbname : '')
+  );
+
+  if ($preset) {
+    $form['connection'] = array(
+      '#type' => 'hidden',
+      '#value' => $preset->name
+    );
+  }
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save Connection'),
+    '#weight' => 9,
+  );
+
+  if ($preset) {
+    $form['delete'] = array(
+      '#type' => 'submit',
+      '#value' => t('Delete'),
+      '#weight' => 9
+    );
+  } 
+  return $form;
+}
+
+function zend_db_create_connection_validate($form, &$form_state) {
+  $options = $form_state['values'];
+
+  /* Really ugly control, howto skip validation for Delete button ? */
+  if ($options['op'] != t('Delete')) {
+    if (_zend_db_get_connection_by_name($options['name']) && !($options['connection'])) {
+      form_set_error('name', t('Connection name alredy used, please choose another one.'));
+    }
+
+    /* Check the DB connection */
+    try {
+      $db_options = array('host', 'username', 'password', 'dbname', 'port');
+      foreach ($db_options as $option) {
+        $valid_options[$option] = $options[$option];
+      }
+      /* If we have all options, test connection otherwise catch Exception and fail */
+      if ($valid_options) zend_db_test_instance($valid_options, $options['dbtype']);
+      drupal_set_message('Connection correctly established.');
+
+    }
+    catch (Exception $e) {
+      drupal_set_message('Connection Failed: '.$e->getMessage(), 'error');
+      form_set_error('name', 'Connection is not available');
+    }
+  }
+}
+
+
+function zend_db_create_connection_submit($form, &$form_state) {
+  $options = $form_state['values'];
+  if ($options['op'] == t('Delete')) {
+    db_query('DELETE FROM {zend_db} WHERE name = "%s"', $options['connection']);
+    drupal_set_message(t('Preset correctly deleted.'));
+    drupal_goto('admin/build/zend/db');
+  }
+
+  $db_options = array('name', 'host', 'username', 'password', 'dbname', 'dbtype', 'port', 'host');
+  foreach ($db_options as $option) {
+      $valid_options[$option] = $options[$option];
+  }
+  $valid_options = (object) $valid_options;
+  
+  /* Update object if is an update */
+  if($connection = $options['connection']) $valid_options->name = $connection;
+  drupal_write_record('zend_db', $valid_options, ($options['connection'] ? 'name' : null));
+}
+
+function zend_db_test_instance($options, $dbtype) {
+  $preset = array_merge($options, array('dbtype' => $dbtype));
+  return zend_db_get_instance($preset, true);
+}
+
+
+
+
+
+?>

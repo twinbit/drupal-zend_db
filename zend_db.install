@@ -1,0 +1,63 @@
+<?php
+
+function zend_db_schema() {
+  $schema['zend_db'] = array(
+    'description' => t('TODO: please describe this table!'),
+    'fields' => array(
+      'name' => array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'dbtype' => array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'username' => array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'password' => array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'port' => array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'dbname' => array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'host' => array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('name'),
+  );
+  return $schema;
+}
+
+
+function zend_db_install() {
+  drupal_install_schema('zend_db');
+}
+
+function zend_db_uninstall() {
+  drupal_uninstall_schema('zend_db');
+}
+
+?>
