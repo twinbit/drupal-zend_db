@@ -43,9 +43,19 @@ class Drupal_Zend_Db {
 
     switch($preset['dbtype']) {
       case 'mysql' :
-        return $this->createMysql($options, $preset);
+        $this->createMysql($options, $preset);
+        break;
       case 'pgsql' :
-          $this->createPgsql($options, $preset);
+        $this->createPgsql($options, $preset);
+        break;
+      case 'db2' :
+        $this->createIbm($options, $preset);
+        break;
+      case 'oracle' :
+        $this->createOracle($options, $preset);
+        break;
+      case 'sqlite' :
+        $this->createSqlite($options, $preset);
         break;
       case 'default' :
         throw new Exception("DBMS $db_type unsupported.");
@@ -65,6 +75,18 @@ class Drupal_Zend_Db {
 
   private function createPgsql($options, $preset = null) {
     $this->handle = new Zend_Db_Adapter_Pdo_Pgsql($options);
+  }
+
+  private function createIbm($options, $preset = null) {
+    $this->handle = new Zend_Db_Adapter_Pdo_Ibm($options);
+  }
+
+  private function createOracle($options, $preset = null) {
+    $this->handle = new Zend_Db_Adapter_Pdo_Oci($options);
+  }
+
+  private function createSqlite($options, $preset = null) {
+    $this->handle = new Zend_Db_Adapter_Pdo_Sqlite($options);
   }
 
   public function get($preset) {
@@ -87,6 +109,10 @@ class Drupal_Zend_Db {
     else {
       throw new Exception('No connections available for this preset.');
     }
+  }
+
+  public function raw($query) {
+    return $this->handle->getConnection()->exec($query);
   }
 
   public function handle() {

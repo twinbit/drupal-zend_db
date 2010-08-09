@@ -7,6 +7,9 @@ function zend_db_get_instance($preset_name, $test = false) {
   else {
     $preset = $preset_name;
   }
+
+  $preset = (array) $preset;
+
   if ($preset) {
    try {
       $conn = Drupal_Zend_Db::get($preset);

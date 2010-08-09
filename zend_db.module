@@ -103,12 +103,16 @@ function zend_db_list_tables($preset) {
   if ($conn) {
     $tables = $conn->getTables();
     if ($tables) {
-      return theme('zend_db_list_tables', $preset, $tables);
+      $output = theme('zend_db_list_tables', $preset, $tables);
+    }
+    else {
+      $output = t('No tables availables');
     }
   }
   else {
-    return t('No connection available for this Database, please check the <a href="%url"> configuration </a> or if the RDBMS is accepting connection', array('%url' => 'admin/build/zend/db/edit/'.$preset->name));
+    $output = t('No connection available for this Database, please check the <a href="%url"> configuration </a> or if the RDBMS is accepting connection', array('%url' => 'admin/build/zend/db/edit/'.$preset->name));
   }
+  return $output;
 }
 
 function zend_db_name_load($name = '') {
@@ -193,7 +197,7 @@ function zend_db_create_connection($form_state, $preset = '') {
   }
   $form['dbtype'] = array(
     '#type' => 'select',
-    '#options' => array('mysql' => 'Mysql', 'pgsql' => 'Postgresql'),
+    '#options' => array('mysql' => 'Mysql', 'pgsql' => 'Postgresql', 'db2' => 'IBM DB2', 'oracle' => 'Oracle OCI', 'sqlite' => 'SQLite'),
     '#title' => t('DBMB Type'),
     '#description' => t('Select a DBMS supported'),
     '#default_value' => ($preset ? $preset->dbtype : ''),
@@ -270,22 +274,22 @@ function zend_db_create_connection_validate($form, &$form_state) {
     }
 
     /* Check the DB connection */
-    try {
-      $db_options = array('host', 'username', 'password', 'dbname', 'port');
-      foreach ($db_options as $option) {
-        $valid_options[$option] = $options[$option];
-      }
-      /* If we have all options, test connection otherwise catch Exception and fail */
-      if ($valid_options) zend_db_test_instance($valid_options, $options['dbtype']);
-      drupal_set_message('Connection correctly established.');
-
+    $db_options = array('host', 'username', 'password', 'dbname', 'port');
+    foreach ($db_options as $option) {
+      $valid_options[$option] = $options[$option];
     }
-    catch (Exception $e) {
-      drupal_set_message('Connection Failed: '.$e->getMessage(), 'error');
-      form_set_error('name', 'Connection is not available');
+    /* If we have all options, test connection otherwise catch Exception and fail */
+    if ($valid_options) {
+      if (zend_db_test_instance($valid_options, $options['dbtype'])) {
+        drupal_set_message('Connection correctly established.');
+      }
+      else {
+        form_set_error('name', 'Connection is not available');
+      }
     }
   }
 }
+
 
 
 function zend_db_create_connection_submit($form, &$form_state) {
