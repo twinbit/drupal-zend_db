@@ -58,6 +58,26 @@ function zend_db_menu() {
             'type' => MENU_CALLBACK,
   );
 
+  $items['admin/build/zend/db/query/%zend_db_name'] = array(
+            'title callback' => 'zend_db_list_table_title',
+            'title arguments' => array(5),
+            'page callback' => 'drupal_get_form',
+            'page arguments' => array('zend_db_query_form', 5),
+            'access callback' => 'user_access',
+            'access arguments' => array('administer zend_db'),
+            'type' => MENU_CALLBACK,
+  );
+
+   $items['admin/build/zend/db/query/%zend_db_name/%query'] = array(
+            'title callback' => 'zend_db_list_table_title',
+            'title arguments' => array(5),
+            'page callback' => 'zend_db_query',
+            'page arguments' => array(5, 6),
+            'access callback' => 'user_access',
+            'access arguments' => array('administer zend_db'),
+            'type' => MENU_CALLBACK,
+  );
+
   $items['admin/build/zend/db/tables/describe/%zend_db_name'] = array(
             'title callback' => 'zend_db_describe_table_title',
             'title arguments' => array(6, 7),
@@ -83,7 +103,65 @@ function zend_db_describe_table_title($preset, $table) {
   return t('Describe table').': '.$table.' -  Preset: '.$preset->name;
 }
 
+function zend_db_query_form(&$form_state, $preset) {
+  if ($preset) {
+    $form['query'] = array(
+      '#title' => t('SQL'),
+      '#description' => t('Enter here your sql definition, no validation will made on SQL correctness'),
+      '#type' => 'textarea',
+      '#required' => true,
+      '#default_value' => ($form_state['query'] ? $form_state['query'] : '')
+    );
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => 'Execute'
+    );
+    $form['preset'] = array(
+      '#type' => 'hidden',
+      '#value' => $preset->name
+    );
 
+    if ($result = $form_state['result']) {
+      if (is_numeric($result)) {
+        $output = t('Query executed, affected %d rows', array('%d' => $result));
+      }
+      else if (is_array($result)) {
+        $output = theme('zend_db_query_result', $result);
+      }
+
+      $form['result'] = array('#type' => 'fieldset', '#title' => t('Query result'), '#collapsed' => true);
+      $form['result']['values'] = array('#value' => $output);
+    }
+
+    return $form;
+  }
+  else {
+    drupal_set_message(t('Preset not available.'), 'error');
+    drupal_goto('admin/build/zend/db');
+  }
+}
+
+function zend_db_query_form_submit($form, &$form_state) {
+  $options = $form_state['values'];
+  if ($conn = zend_db_get_instance($options['preset'])) {
+    try {
+
+      if (preg_match('/select/', strtolower($options['query']))) {
+        $result = $conn->handle()->fetchAll(strtolower($options['query']));
+      }
+      else {
+        $result = $conn->raw(strtolower($options['query']));
+      }
+      
+      $form_state['result'] = $result;
+      $form_state['query'] = $options['query'];
+      $form_state['rebuild'] = true;
+    }
+    catch (Exception $e) {
+      drupal_set_message(t('Query error: '. $e->getMessage()), 'error');
+    }
+  }
+}
 
 
 function zend_db_describe_table($preset, $table) {
@@ -121,6 +199,16 @@ function zend_db_name_load($name = '') {
   } else {
     return new stdClass();
   }
+}
+
+function zend_db_get_presets($preset = false) {
+  $sql = "SELECT name FROM {zend_db}";
+  if ($preset) $sql .= ' WHERE name = "%s"';
+  $result = db_query($sql, ($preset ? $preset : ''));
+  while ($preset = db_fetch_object($result)) {
+    $presets[$preset->name] = $preset;
+  }
+  return $presets;
 }
 
 function _zend_db_get_stored_connections() {
@@ -171,6 +259,7 @@ function _zend_db_get_stored_connections() {
 
 function _zend_db_actions($preset) {
   $items[] = l(t('List tables'), 'admin/build/zend/db/tables/'.$preset['name']);
+  $items[] = l(t('Query'), 'admin/build/zend/db/query/'.$preset['name']);
   return theme('item_list', $items);
 }
 

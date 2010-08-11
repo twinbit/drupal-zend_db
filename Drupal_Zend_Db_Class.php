@@ -131,6 +131,21 @@ class Drupal_Zend_Db {
     return $this->handle->closeConnection();
   }
 
+  /* Return Zend_DB table instance */
+  public function table($table) {
+    if ($this->handle) {
+      Zend_Db_Table::setDefaultAdapter($this->handle);
+      return new Zend_Db_Table($table);
+    }
+    else {
+      throw new Exception('No connections available to DBMS');
+    }
+  }
+
+  public function select(Zend_Db_Table $table) {
+    return $table->select();
+  }
+
 }
 
 

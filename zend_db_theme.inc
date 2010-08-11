@@ -5,7 +5,9 @@ function zend_db_theme() {
     'zend_db_list_tables' => array(
       'arguments' => array('preset' => NULL, 'tables' => NULL)),
     'zend_db_describe_table' => array(
-      'arguments' => array('preset' => NULL, 'fields' => NULL))
+      'arguments' => array('preset' => NULL, 'tables' => NULL)),
+    'zend_db_query_result' => array(
+      'arguments' => array('result' => NULL))
     );
 }
 
@@ -34,6 +36,16 @@ function theme_zend_db_list_tables($preset, $tables) {
   return $output;
 }
 
-
+function theme_zend_db_query_result($result) {
+  $header = array_keys($result[0]);
+  foreach ($result as $res) {
+    $row = array();
+    foreach ($header as $key) {
+      $row[] = $res[$key];
+    }
+    $rows[] = $row;
+  }
+  return theme('table', $header, $rows);
+}
 
 ?>
